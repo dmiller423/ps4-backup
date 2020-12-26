@@ -12,9 +12,20 @@
 #include <string.h>
 #include <memory.h>
 
-#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <limits.h>
+#include <fcntl.h>
+#include <ctype.h>
 #include <ftw.h>
+
+#include <string>
+#include <vector>
+
+using namespace std;
 
 
 #include <orbis/libkernel.h>
@@ -118,6 +129,43 @@ static void hexdump(u8 *pAddr, u32 psize, u32 cols = 16)
 		klog("\" \n");
 	}
 }
+
+
+
+
+inline static bool strf(std::string *str, const char *fmt, ...)
+{
+	int required, length;
+	va_list args;
+
+	va_start(args, fmt);
+	required = std::vsnprintf(nullptr, 0, fmt, args);
+	va_end(args);
+	if (required < 0) {
+		str->clear();
+		return false;
+	}
+	required += 1;
+
+	auto buf = std::make_unique<char[]>(required);
+	va_start(args, fmt);
+	length = std::vsnprintf(buf.get(), required, fmt, args);
+	va_end(args);
+	if (length < 0) {
+		str->clear();
+		return false;
+	}
+
+	*str = buf.get();
+	return true;
+}
+
+
+
+
+#define _YN(b) ((b)?"Yes":"No")
+
+
 
 
 struct BtnState {

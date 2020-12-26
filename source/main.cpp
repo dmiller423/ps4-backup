@@ -6,8 +6,8 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_sw.hpp"
 
-#include "ui/fsbrowser.h"
 #include "ui/backup.h"
+#include "ui/fsbrowser.h"
 
 
 //#ifndef _OO_
@@ -18,48 +18,17 @@ unsigned int sceLibcHeapDebugFlags = 4; //SCE_LIBC_HEAP_DEBUG_SHORTAGE;
 //#endif
 
 
-// unoptimized test dummies //
-//
-
-INLINE void drawRect(VideoOut& dst, unat x, unat y, unat w, unat h, u32 col)
-{
-	unat d_w = dst.Width(), d_h = dst.Height();
-	assert((x + w) <= d_w && (y + h) <= d_h);
-
-	for (unat line=0; line<h; line++) {
-		unat offs = (y + line) * (4 * d_w) + (4 * x);
-		u32* pp = (u32*)(dst.CurrentBuffer() + offs);
-		for (unat px=0; px<w; px++) pp[px] = col;	//while (pp < &pp[w]) *pp++ = col;
-	}
-}
-///////////////////////////////////////////////////////////////////////////////////////
-
-
 int main()
 {
 	jailbreak(get_fw_version());
 
 	OrbisUserServiceUserId userId=0;
-
-
 	if (ORBIS_OK != sceUserServiceInitialize(nullptr) ||
 		ORBIS_OK != sceUserServiceGetInitialUser(&userId)) {
 		klog("Error, sceUserService{Init,GetUser}(): Failed! \n");
 		return -1;
 	}
 	klog("-- got userId: 0x%08X\n", userId);
-
-#if 0
-	SceUserServiceLoginUserIdList userIdList;
-	verify(SCE_OK == sceUserServiceGetLoginUserIdList(&userIdList));
-
-	for (int i = 0; i < SCE_USER_SERVICE_MAX_LOGIN_USERS; i++) {
-		if (userIdList.userId[i] != SCE_USER_SERVICE_USER_ID_INVALID) {
-			pad1_H = scePadOpen(userIdList.userId[i], SCE_PAD_PORT_TYPE_STANDARD, 0, NULL);
-			if (pad1_H >= 0) printf("Fixed pad1_H: %X\n", pad1_H); return;  // Winner Winner
-		}
-	}
-#endif
 
 
 	int pad_h = 0;
@@ -188,17 +157,6 @@ neveruary:
 
 
 
-
-
-
-
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/uio.h>
-#include <fcntl.h>
-#include <limits.h>     /* definition of	OPEN_MAX */
-#include <unistd.h>
 
 
 

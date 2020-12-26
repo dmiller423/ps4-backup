@@ -15,7 +15,10 @@ class BackupUI
 		Restore,
 		BackupALL,
 		RestoreALL,
+
+		SelectDir,
 		FatalError,
+
 		OPType_Count
 	};
 
@@ -46,6 +49,21 @@ class BackupUI
 	string errorStr;
 public:
 
+	static BackupUI& Get()
+	{
+		static BackupUI ui;
+		return ui;
+	}
+
+	static void ResetOp() {
+		Get().opType=None;
+	}
+
+	static void SetDir(const string& sPath) {
+		if (existsDir(sPath))
+			Get().backupPath=sPath;
+	}
+
 	void render()
 	{
 		auto scaling = 1.0f;	// only used for spacing
@@ -58,7 +76,14 @@ public:
 			ImGui::SetNextWindowSize(ImVec2(600, 400));
 			if (ImGui::BeginPopupModal("Confirm"))
 			{
-				if (FatalError==opType)
+				if (SelectDir == opType)
+				{
+#if 0	// requires moving headers to cpp files or some magic
+					FSBrowser fsb;
+					fsb.render();
+#endif
+				}
+				else if (FatalError==opType)
 				{
 					ImGui::Text("There was an error! (In: %s)", (nullptr==opTarget?"[ALL] operation":opTarget->path.c_str()));
 					if(!errorStr.empty())
@@ -144,8 +169,47 @@ public:
 
 			ImGui::PopStyleVar();
 		}
-		ImGui::Text(" ");
-		ImGui::Text(" ");
+
+		ImGui::Text("\t-*-");
+
+		if (ImGui::Button("Default"))
+			backupPath=string("/data/ps4-backup");
+
+#if 0	// future, selection dialog works,  just requires some rearranging and using the singleton interface
+		ImGui::SameLine(110);
+		if (ImGui::Button("Select"))
+			opType=SelectDir;
+#endif
+
+		ImGui::SameLine(230);
+		ImGui::Text("Backup/Restore Directory:");
+		ImGui::SameLine(450);
+		ImGui::Text("\"%s\"", backupPath.c_str());
+
+		// dumb but effective w.o needing OS fs watch || device detection //
+		vector<string> mntList, tstList;
+		if(getEntries("/mnt", mntList)) {
+			u32 bxo=0;
+			for (auto& me : mntList) {
+				string tmpPath = string("/mnt/") + me;
+
+				if (0==me.rfind("usb",0) && isdigit(me[3]) && existsDir(tmpPath))
+				{
+					tstList.clear();
+					if (getEntries(tmpPath, tstList) && tstList.size() > 2)
+					{
+						if (bxo > 0)
+							ImGui::SameLine(bxo);
+						bxo += 80;
+						if (ImGui::Button(me.c_str()))
+							backupPath = tmpPath;
+					}
+
+				}
+			}
+		}
+		ImGui::Text("\t-*-");
+
 		if (ImGui::Button("Backup [ALL]")) {
 			opType=BackupALL;
 		}
@@ -254,17 +318,17 @@ private:
 
 	inline static u32 _m(const struct stat* s) { return ((u32*)s)[2]; }	// *HACK* OO mighty broken
 
-	inline bool existsDir(const char* sPath) {
+	inline static bool existsDir(const char* sPath) {
 		struct stat sb;	return (stat(sPath, &sb) == 0 && S_ISDIR(_m(&sb)));
 	}
-	inline bool existsFile(const char* sPath) {
+	inline static bool existsFile(const char* sPath) {
 		struct stat sb;	return (stat(sPath, &sb) == 0 && S_ISREG(_m(&sb)));
 	}
 
-	inline bool existsDir (const string& path) { return existsDir (path.c_str()); }
-	inline bool existsFile(const string& path) { return existsFile(path.c_str()); }
+	inline static bool existsDir (const string& path) { return existsDir (path.c_str()); }
+	inline static bool existsFile(const string& path) { return existsFile(path.c_str()); }
 
-	inline string sHx64(uint64_t v) {
+	inline static string sHx64(uint64_t v) {
 		thread_local static char b[17];
 		b[16]=0;
 		sprintf(b,"%016lX",v);
@@ -295,11 +359,11 @@ private:
 		size = lseek(fd, 0, SEEK_END);
 		klog("-src size: %ld bytes!\n", size);
 		lseek(fd, 0, SEEK_SET);
-		if (size <= 0)
+		if (size < 0)
 			return false;
 			
 		fileBuff.resize(size);
-		if (size!=(actual=read(fd, &fileBuff[0], size))) {
+		if (size>0 && size!=(actual=read(fd, &fileBuff[0], size))) {
 			klog("@@ bad read , read %ld / %ld bytes : errno: 0x%08X\n", actual, size, errno);
 			return false;
 		}
@@ -316,7 +380,7 @@ private:
 
 			return false;
 		}
-		if (size!=(actual=write(fd, &fileBuff[0], size))) {
+		if (size>0 && size!=(actual=write(fd, &fileBuff[0], size))) {
 			klog("@@ bad write , wrote %ld / %ld bytes : errno: 0x%08X\n", actual, size, errno);
 			return false;
 		}
