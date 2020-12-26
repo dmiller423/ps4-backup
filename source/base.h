@@ -13,21 +13,14 @@
 #include <memory.h>
 
 #include <ctype.h>
+#include <unistd.h>
+#include <ftw.h>
 
-
-#ifdef _OO_
 
 #include <orbis/libkernel.h>
 #include <orbis/UserService.h>
 #include <orbis/Pad.h>
 
-#else
-
-#include <kernel.h>
-#include <user_service.h>
-#include <pad.h>
-
-#endif
 
 
 // base types
